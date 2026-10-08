@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart - AnimeStore</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="page-container">
+    <h1 class="page-title">Shopping Cart</h1>
+    <div id="cart-content"></div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    injectHeader('cart');
+    injectFooter();
+
+    function renderCart() {
+      const cart = getCart();
+      const container = document.getElementById('cart-content');
+
+      if (cart.length === 0) {
+        container.innerHTML = `
+          <div class="cart-empty">
+            <div class="icon">\u{1F6D2}</div>
+            <h3>Your cart is empty</h3>
+            <p style="margin-bottom:20px">Browse our collection and add some items!</p>
+            <a href="products.html" class="btn btn-primary">Shop Now</a>
+          </div>
+        `;
+        return;
+      }
+
+      let itemsHTML = cart.map(item => `
+        <div class="cart-item">
+          <img src="${item.image}" alt="${item.name}">
+          <div class="cart-item-info">
+            <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item-price">${formatPrice(item.price)}</div>
+          </div>
+          <div class="cart-item-controls">
+            <button class="qty-btn" onclick="changeQty('${item.id}', -1)">-</button>
+            <span class="qty-display">${item.quantity}</span>
+            <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+            <button class="remove-btn" onclick="removeItem('${item.id}')" title="Remove">\u2715</button>
+          </div>
+        </div>
+      `).join('');
+
+      const subtotal = getCartTotal();
+      const shipping = subtotal >= 3000 ? 0 : 150;
+      const total = subtotal + shipping;
+
+      container.innerHTML = `
+        <div>${itemsHTML}</div>
+        <div class="cart-summary">
+          <div class="summary-row"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>
+          <div class="summary-row"><span>Shipping</span><span>${shipping === 0 ? 'FREE' : formatPrice(shipping)}</span></div>
+          <div class="summary-row total"><span>Total</span><span class="price">${formatPrice(total)}</span></div>
+          ${shipping > 0 ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin-top:8px">Add ${formatPrice(3000 - subtotal)} more for free shipping!</p>` : ''}
+          <a href="checkout.html" class="btn btn-primary btn-full btn-lg" style="margin-top:16px">Proceed to Checkout</a>
+          <a href="products.html" class="btn btn-secondary btn-full" style="margin-top:8px">Continue Shopping</a>
+        </div>
+      `;
+    }
+
+    function changeQty(id, delta) {
+      const cart = getCart();
+      const item = cart.find(i => i.id === id);
+      if (item) {
+        const newQty = item.quantity + delta;
+        if (newQty <= 0) {
+          removeFromCart(id);
+        } else {
+          updateQuantity(id, newQty);
+        }
+        renderCart();
+      }
+    }
+
+    function removeItem(id) {
+      removeFromCart(id);
+      renderCart();
+      showToast('Item removed from cart');
+    }
+
+    renderCart();
+  </script>
+</body>
+</html>

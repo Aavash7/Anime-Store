@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - AnimeStore</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="help-container">
+    <h1 class="page-title">Contact Us</h1>
+
+    <div class="help-section">
+      <h3>✉️ Get in Touch</h3>
+      <p>Have a question? Send us a message and we'll get back to you as soon as possible.</p>
+      <div class="auth-error" id="contact-error"></div>
+      <form id="contact-form" onsubmit="return handleContact(event)" style="margin-top:16px">
+        <div class="form-group">
+          <label for="name">Your Name</label>
+          <input type="text" id="name" required placeholder="Your full name">
+        </div>
+        <div class="form-group">
+          <label for="email">Your Email</label>
+          <input type="email" id="email" required placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" required placeholder="What is this about?">
+        </div>
+        <div class="form-group">
+          <label for="message">Message</label>
+          <textarea id="message" required rows="5" placeholder="Write your message here..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="send-btn">Send Message</button>
+      </form>
+      <div id="contact-success" style="display:none;text-align:center;padding:20px">
+        <div style="font-size:2.5rem;margin-bottom:12px">✓</div>
+        <h3>Message Sent!</h3>
+        <p style="color:var(--text-secondary);margin-top:8px">Thank you for reaching out. We will reply to your email shortly.</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>📍 Our Contact Information</h3>
+      <div class="contact-card">
+        <div class="icon">✉️</div>
+        <div class="info">
+          <div class="label">Email</div>
+          <div class="value"><a href="https://mail.google.com/mail/u/0/#inbox?aavashniraula7@gmail.com" target="_blank">aavashniraula7@gmail.com</a></div>
+          <div class="value"><a href="https://mail.google.com/mail/u/0/#inbox?santoshrajdhami94@gmail.com" target="_blank">Santoshrajdhami94@gmail.com</a></div>
+          
+        </div>
+      </div>
+      <div class="contact-card" style="margin-top:12px">
+        <div class="icon">📱</div>
+        <div class="info">
+          <div class="label">Phone</div>
+          <div class="value">9841228783 / 9766546120</div>
+        </div>
+      </div>
+      <div class="contact-card" style="margin-top:12px">
+        <div class="icon">📍</div>
+        <div class="info">
+          <div class="label">Address</div>
+          <div class="value">Kathmandu, Nepal</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>⏰ Business Hours</h3>
+      <ul>
+        <li>Sunday - Friday: 10:00 AM - 6:00 PM</li>
+        <li>Saturday: Closed</li>
+        <li>We respond to emails within 24 hours during business days.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    injectHeader('contact');
+    injectFooter();
+
+    function handleContact(event) {
+      event.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      if (!name || !email || !subject || !message) {
+        const el = document.getElementById('contact-error');
+        el.textContent = 'Please fill in all fields';
+        el.classList.add('show');
+        return false;
+      }
+
+      const btn = document.getElementById('send-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      setTimeout(() => {
+        document.getElementById('contact-form').style.display = 'none';
+        document.getElementById('contact-success').style.display = 'block';
+
+        const mailtoLink = 'mailto:aavashniraula7@gmail.com,santonshrajdhami@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent('From: ' + name + '\nEmail: ' + email + '\n\n' + message);
+        const backupLink = document.createElement('a');
+        backupLink.href = mailtoLink;
+        backupLink.style.display = 'none';
+        document.body.appendChild(backupLink);
+      }, 1000);
+
+      return false;
+    }
+  </script>
+</body>
+</html>

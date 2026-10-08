@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders - AnimeStore</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="page-container">
+    <h1 class="page-title">My Orders</h1>
+    <div id="orders-content"></div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    injectHeader('orders');
+    injectFooter();
+
+    async function loadOrders() {
+      const container = document.getElementById('orders-content');
+
+      if (!isLoggedIn()) {
+        container.innerHTML = `
+          <div class="cart-empty">
+            <div class="icon">\u{1F464}</div>
+            <h3>Please login to view your orders</h3>
+            <p style="margin-bottom:20px">You need an account to see your order history.</p>
+            <a href="login.html" class="btn btn-primary">Login</a>
+            <a href="signup.html" class="btn btn-secondary" style="margin-left:8px">Sign Up</a>
+          </div>
+        `;
+        return;
+      }
+
+      const session = getSession();
+      container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading your orders...</div>';
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc&limit=50`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to load orders');
+        const orders = await res.json();
+
+        if (orders.length === 0) {
+          container.innerHTML = `
+            <div class="cart-empty">
+              <div class="icon">\u{1F4E6}</div>
+              <h3>No orders yet</h3>
+              <p style="margin-bottom:20px">Your order history will appear here.</p>
+              <a href="products.html" class="btn btn-primary">Start Shopping</a>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = orders.map(order => {
+          const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+          const itemsList = items.map(i => `${i.name} x${i.quantity}`).join(', ');
+          const date = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          const statusClass = order.status === 'completed' ? 'completed' : 'pending';
+          const statusText = order.status === 'completed' ? 'Completed' : 'Pending';
+
+          return `
+            <div class="order-card">
+              <div class="order-header">
+                <div>
+                  <div class="order-id">Order #${order.id.slice(0, 8).toUpperCase()}</div>
+                  <div class="order-date">${date}</div>
+                </div>
+                <span class="order-status ${statusClass}">${statusText}</span>
+              </div>
+              <div class="order-items-list">${itemsList}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                <span style="font-size:0.82rem;color:var(--text-secondary)">Payment: ${order.payment_method === 'esewa' ? 'eSewa' : 'Bank Payment'}</span>
+                <span class="order-total">${formatPrice(order.total)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = '<p style="text-align:center;color:var(--text-secondary)">Could not load orders. Please try again later.</p>';
+      }
+    }
+
+    loadOrders();
+  </script>
+</body>
+</html>

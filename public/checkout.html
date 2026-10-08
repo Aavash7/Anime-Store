@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - AnimeStore</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="page-container">
+    <h1 class="page-title">Checkout</h1>
+    <div id="checkout-content"></div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    injectHeader('checkout');
+    injectFooter();
+
+    let selectedPayment = null;
+
+    function renderCheckout() {
+      const cart = getCart();
+      const container = document.getElementById('checkout-content');
+
+      if (cart.length === 0) {
+        container.innerHTML = '' +
+          '<div class="cart-empty">' +
+            '<div class="icon">\u{1F6D2}</div>' +
+            '<h3>Your cart is empty</h3>' +
+            '<p style="margin-bottom:20px">Add items before checking out.</p>' +
+            '<a href="products.html" class="btn btn-primary">Shop Now</a>' +
+          '</div>';
+        return;
+      }
+
+      const user = getCurrentUser();
+      const subtotal = getCartTotal();
+      const shipping = subtotal >= 3000 ? 0 : 150;
+      const total = subtotal + shipping;
+
+      var itemsHTML = cart.map(function(item) {
+        return '<div class="summary-row">' +
+          '<span>' + item.name + ' x ' + item.quantity + '</span>' +
+          '<span>' + formatPrice(item.price * item.quantity) + '</span>' +
+        '</div>';
+      }).join('');
+
+      var loginHint = user ? '' : '<p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px"><a href="login.html" style="color:var(--primary);font-weight:600">Login</a> to save your details and track orders. Or continue as guest below.</p>';
+      var nameVal = user ? user.email : '';
+
+      container.innerHTML = '' +
+        '<div class="checkout-grid">' +
+          '<div>' +
+            '<div class="checkout-section">' +
+              '<h3>\u{1F4DD} Delivery Details</h3>' +
+              loginHint +
+              '<div class="form-group">' +
+                '<label for="ck-name">Full Name</label>' +
+                '<input type="text" id="ck-name" placeholder="Your full name" value="' + nameVal + '">' +
+              '</div>' +
+              '<div class="form-group">' +
+                '<label for="ck-email">Email</label>' +
+                '<input type="email" id="ck-email" placeholder="you@example.com" value="' + (user ? user.email : '') + '">' +
+              '</div>' +
+              '<div class="form-group">' +
+                '<label for="ck-phone">Phone Number</label>' +
+                '<input type="tel" id="ck-phone" placeholder="98XXXXXXXX">' +
+              '</div>' +
+              '<div class="form-group">' +
+                '<label for="ck-address">Delivery Address</label>' +
+                '<textarea id="ck-address" placeholder="House number, street name, city, ward number"></textarea>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="checkout-section">' +
+              '<h3>\u{1F4B3} Payment Method</h3>' +
+              '<div class="payment-methods">' +
+                '<div class="payment-option" id="pay-esewa" onclick="selectPayment(\'esewa\')">' +
+                  '<div class="icon">\u{1F4F1}</div>' +
+                  '<div class="name">eSewa</div>' +
+                  '<div class="desc">Pay instantly with eSewa</div>' +
+                '</div>' +
+                '<div class="payment-option" id="pay-bank" onclick="selectPayment(\'bank\')">' +
+                  '<div class="icon">\u{1F3E6}</div>' +
+                  '<div class="name">Bank Payment</div>' +
+                  '<div class="desc">Pay via bank account</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="payment-details" id="esewa-details">' +
+                '<h4>eSewa Payment</h4>' +
+                '<p>You will be taken to a secure eSewa payment page to complete your payment of <strong>' + formatPrice(total) + '</strong>.</p>' +
+              '</div>' +
+              '<div class="payment-details" id="bank-details">' +
+                '<h4>Bank Payment</h4>' +
+                '<p>You will be taken to a secure bank payment page to complete your payment of <strong>' + formatPrice(total) + '</strong>.</p>' +
+              '</div>' +
+              '<div class="auth-error" id="checkout-error" style="margin-top:16px"></div>' +
+              '<button class="btn btn-primary btn-full btn-lg" id="proceed-btn" style="margin-top:16px" onclick="proceedToPayment()">Proceed to Payment</button>' +
+            '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="checkout-section" style="position:sticky;top:80px">' +
+              '<h3>\u{1F6D2} Order Summary</h3>' +
+              itemsHTML +
+              '<div class="summary-row" style="margin-top:8px"><span>Subtotal</span><span>' + formatPrice(subtotal) + '</span></div>' +
+              '<div class="summary-row"><span>Shipping</span><span>' + (shipping === 0 ? 'FREE' : formatPrice(shipping)) + '</span></div>' +
+              '<div class="summary-row total"><span>Total</span><span class="price">' + formatPrice(total) + '</span></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function selectPayment(method) {
+      selectedPayment = method;
+      document.querySelectorAll('.payment-option').forEach(function(el) { el.classList.remove('selected'); });
+      document.getElementById('pay-' + method).classList.add('selected');
+      document.getElementById('esewa-details').classList.toggle('show', method === 'esewa');
+      document.getElementById('bank-details').classList.toggle('show', method === 'bank');
+    }
+
+    function showError(msg) {
+      var el = document.getElementById('checkout-error');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    function proceedToPayment() {
+      if (!selectedPayment) {
+        showError('Please select a payment method (eSewa or Bank Payment)');
+        return;
+      }
+
+      var name = document.getElementById('ck-name').value.trim();
+      var email = document.getElementById('ck-email').value.trim();
+      var phone = document.getElementById('ck-phone').value.trim();
+      var address = document.getElementById('ck-address').value.trim();
+
+      if (!name || !email || !phone || !address) {
+        showError('Please fill in all delivery details');
+        return;
+      }
+
+      var cart = getCart();
+      var subtotal = getCartTotal();
+      var shipping = subtotal >= 3000 ? 0 : 150;
+      var total = subtotal + shipping;
+
+      sessionStorage.setItem('pending_payment', JSON.stringify({
+        name: name,
+        email: email,
+        phone: phone,
+        address: address,
+        payment_method: selectedPayment,
+        total: total,
+        items: cart
+      }));
+
+      window.location.href = 'payment.html';
+    }
+
+    renderCheckout();
+  </script>
+</body>
+</html>

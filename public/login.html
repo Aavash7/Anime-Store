@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - AnimeStore</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <h2>Welcome Back</h2>
+      <p>Sign in to your AnimeStore account</p>
+      <div class="auth-error" id="auth-error"></div>
+      <form id="login-form" onsubmit="return handleLogin(event)">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" required placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" required placeholder="Your password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">Sign In</button>
+      </form>
+      <p class="auth-link">Don't have an account? <a href="signup.html">Sign Up</a></p>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    injectHeader('login');
+    injectFooter();
+
+    if (isLoggedIn()) {
+      window.location.href = 'index.html';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const session = await authSignIn(email, password);
+        saveSession(session);
+        showToast('Login successful');
+        setTimeout(() => window.location.href = 'index.html', 500);
+      } catch (err) {
+        showError(err.message || 'Invalid email or password');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnimeStore - Premium Anime Merchandise in Nepal</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <section class="hero">
+    <h1>Welcome to <span class="accent">AnimeStore</span></h1>
+    <p>Premium anime figures, clothing, and collectibles delivered across Nepal. Pay easily with eSewa or Bank Payment.</p>
+    <a href="products.html" class="btn btn-primary btn-lg">Shop Now</a>
+  </section>
+
+  <section class="products-section">
+    <h2 class="section-title">Featured Products</h2>
+    <div class="products-grid" id="featured-grid">
+      <div class="loading"><div class="spinner"></div>Loading products...</div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    if (typeof injectHeader === 'function') injectHeader('home');
+    if (typeof injectFooter === 'function') injectFooter();
+
+    const STORAGE_KEY = 'animestore_products';
+
+    function getItems() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    }
+
+    function loadFeatured() {
+      const container = document.getElementById('featured-grid');
+      try {
+        const products = getItems();
+        
+        if (products.length === 0) {
+          container.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:var(--text-secondary,#6c757d);padding:40px;">No products available. Add items from the Admin Dashboard.</p>';
+          return;
+        }
+
+        const featured = products.slice(0, 8);
+        container.innerHTML = featured.map(p => productCard(p)).join('');
+      } catch (err) {
+        container.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:var(--text-secondary,#6c757d);">Could not load products. Please try again later.</p>';
+      }
+    }
+
+    function productCard(p) {
+      const stock = p.stock !== undefined ? p.stock : 10;
+      const category = p.category || 'General';
+      const priceText = typeof formatPrice === 'function' ? formatPrice(p.price) : `Rs. ${Number(p.price).toFixed(2)}`;
+
+      const stockBadge = stock > 0
+        ? `<span class="stock-badge stock-in">In Stock</span>`
+        : `<span class="stock-badge stock-out">Out of Stock</span>`;
+
+      return `
+        <div class="product-card">
+          <img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="product-image" loading="lazy" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
+          <div class="product-info">
+            <span class="product-category">${escapeHtml(category)}</span>
+            ${stockBadge}
+            <h3 class="product-name">${escapeHtml(p.name)}</h3>
+            <p class="product-description">${escapeHtml(p.description || '')}</p>
+            <div class="product-footer">
+              <span class="product-price">${priceText}</span>
+              <button class="btn-add-cart" onclick="addToCart('${p.id}','${escapeHtml(p.name).replace(/'/g, "\\'")}',${p.price},'${escapeHtml(p.image_url)}');if(typeof showToast==='function')showToast('Added to cart')" ${stock <= 0 ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''}>
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Auto update when items change in admin dashboard
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY) loadFeatured();
+    });
+
+    loadFeatured();
+  </script>
+</body>
+</html>

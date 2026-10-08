@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnimeStore - Home & Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Header / Navigation -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-indigo-400">AnimeStore</h1>
+      <button id="toggleAdminBtn" onclick="toggleAdminPanel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition">
+        Toggle Admin Control
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-6 space-y-8">
+
+    <!-- ADMIN CONTROL PANEL (View, Add, Edit, Delete) -->
+    <section id="adminSection" class="bg-slate-800 border border-indigo-500/30 rounded-xl p-6 shadow-xl space-y-6">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-indigo-400">Admin Control Panel</h2>
+          <p class="text-sm text-slate-400">Manage store items (Create, Read, Update, Delete)</p>
+        </div>
+      </div>
+
+      <!-- Add / Edit Item Form -->
+      <form id="itemForm" onsubmit="handleFormSubmit(event)" class="bg-slate-900/60 p-4 rounded-lg grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <input type="hidden" id="itemId" />
+        
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Item Title</label>
+          <input type="text" id="itemTitle" required placeholder="e.g. Naruto Figurine" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Price ($)</label>
+          <input type="number" step="0.01" id="itemPrice" required placeholder="29.99" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Image URL</label>
+          <input type="url" id="itemImage" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="flex gap-2">
+          <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded transition">
+            Add Item
+          </button>
+          <button type="button" id="cancelBtn" onclick="resetForm()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold px-3 py-2 rounded transition">
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      <!-- Admin Items Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+            <tr>
+              <th class="p-3">Image</th>
+              <th class="p-3">Title</th>
+              <th class="p-3">Price</th>
+              <th class="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody" class="divide-y divide-slate-700">
+            <!-- Table rows populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PUBLIC STORE DISPLAY -->
+    <section>
+      <h2 class="text-xl font-bold mb-4 text-slate-200">Store Showcase</h2>
+      <div id="storeGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Store product cards populated dynamically -->
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Supabase Setup
+    const SUPABASE_URL = "https://lohayejsnwpdqjppktrz.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGF5ZWpzbndwZHFqcHBrdHJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5ODk0OTUsImV4cCI6MjEwNjU2NTQ5NX0.KoPNL3Z_hTg1Xq0mg-Cd7FeACA3OPENZ8kSG4J9pW5M";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let items = [];
+
+    // Toggle Dashboard Visibility
+    function toggleAdminPanel() {
+      const panel = document.getElementById('adminSection');
+      panel.classList.toggle('hidden');
+    }
+
+    // Load Items (Read)
+    async function fetchItems() {
+      const { data, error } = await supabase.from('products').select('*');
+      if (error) {
+        console.error('Fetch error:', error);
+        return;
+      }
+      items = data || [];
+      render();
+    }
+
+    // Add or Edit Item (Create / Update)
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('itemId').value;
+      const title = document.getElementById('itemTitle').value;
+      const price = parseFloat(document.getElementById('itemPrice').value);
+      const image_url = document.getElementById('itemImage').value;
+
+      if (id) {
+        // Edit Existing Item
+        await supabase.from('products').update({ title, price, image_url }).eq('id', id);
+      } else {
+        // Create New Item
+        await supabase.from('products').insert([{ title, price, image_url }]);
+      }
+
+      resetForm();
+      fetchItems();
+    }
+
+    // Populate Form for Editing
+    function editItem(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+
+      document.getElementById('itemId').value = item.id;
+      document.getElementById('itemTitle').value = item.title;
+      document.getElementById('itemPrice').value = item.price;
+      document.getElementById('itemImage').value = item.image_url || '';
+
+      document.getElementById('submitBtn').innerText = 'Update Item';
+      document.getElementById('submitBtn').className = 'w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded transition';
+      document.getElementById('cancelBtn').classList.remove('hidden');
+    }
+
+    // Delete Item
+    async function deleteItem(id) {
+      if (!confirm("Are you sure you want to delete this item?")) return;
+      await supabase.from('products').delete().eq('id', id);
+      fetchItems();
+    }
+
+    // Reset Form
+    function resetForm() {
+      document.getElementById('itemForm').reset();
+      document.getElementById('itemId').value = '';
+      document.getElementById('submitBtn').innerText = 'Add Item';
+      document.getElementById('submitBtn').className = 'w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded transition';
+      document.getElementById('cancelBtn').classList.add('hidden');
+    }
+
+    // Render Both Admin Table and Store Showcase
+    function render() {
+      const tableBody = document.getElementById('adminTableBody');
+      const storeGrid = document.getElementById('storeGrid');
+
+      // Admin Table Rows
+      tableBody.innerHTML = items.map(item => `
+        <tr class="hover:bg-slate-800/50">
+          <td class="p-3">
+            <img src="${item.image_url || 'https://via.placeholder.com/40'}" class="w-10 h-10 object-cover rounded">
+          </td>
+          <td class="p-3 font-medium">${item.title}</td>
+          <td class="p-3">$${parseFloat(item.price).toFixed(2)}</td>
+          <td class="p-3 text-right space-x-2">
+            <button onclick="editItem('${item.id}')" class="text-indigo-400 hover:text-indigo-300 font-medium">Edit</button>
+            <button onclick="deleteItem('${item.id}')" class="text-rose-400 hover:text-rose-300 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+
+      // Store Product Cards
+      storeGrid.innerHTML = items.map(item => `
+        <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow">
+          <img src="${item.image_url || 'https://via.placeholder.com/300'}" class="w-full h-48 object-cover">
+          <div class="p-4 space-y-2">
+            <h3 class="font-semibold text-lg text-slate-100">${item.title}</h3>
+            <p class="text-indigo-400 font-bold">$${parseFloat(item.price).toFixed(2)}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initial Load
+    fetchItems();
+  </script>
+</body>
+</html>

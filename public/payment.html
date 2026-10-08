@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment - AnimeStore</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="payment-page">
+    <div id="payment-content"></div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="js/app.js"></script>
+  <script>
+    injectHeader('payment');
+    injectFooter();
+
+    var paymentData = null;
+
+    function renderPayment() {
+      var raw = sessionStorage.getItem('pending_payment');
+      if (!raw) {
+        document.getElementById('payment-content').innerHTML = '' +
+          '<div class="cart-empty">' +
+            '<h3>No payment in progress</h3>' +
+            '<p style="margin-bottom:20px">Your payment session has expired.</p>' +
+            '<a href="products.html" class="btn btn-primary">Back to Shop</a>' +
+          '</div>';
+        return;
+      }
+
+      paymentData = JSON.parse(raw);
+      var isEsewa = paymentData.payment_method === 'esewa';
+      var headerClass = isEsewa ? 'esewa' : 'bank';
+      var headerLogo = isEsewa ? '\u{1F4F1}' : '\u{1F3E6}';
+      var headerTitle = isEsewa ? 'eSewa Payment' : 'Bank Payment';
+      var headerSub = isEsewa ? 'Pay securely with eSewa' : 'Pay securely via Bank';
+      var confirmClass = isEsewa ? 'esewa' : 'bank';
+      var confirmText = isEsewa ? 'Confirm & Pay with eSewa' : 'Confirm & Pay via Bank';
+
+      var fieldsHTML = '';
+      if (isEsewa) {
+        fieldsHTML = '' +
+          '<div class="payment-field">' +
+            '<label>eSewa ID (Email or Mobile)</label>' +
+            '<input type="text" id="pf-input1" placeholder="e.g. 98XXXXXXXX or you@email.com">' +
+            '<div class="hint">Enter your eSewa login ID</div>' +
+          '</div>' +
+          '<div class="payment-field">' +
+            '<label>eSewa Password / MPIN</label>' +
+            '<input type="password" id="pf-input2" placeholder="Enter your password or MPIN">' +
+            '<div class="hint">This is a demo - no real credentials needed</div>' +
+          '</div>';
+      } else {
+        fieldsHTML = '' +
+          '<div class="payment-field">' +
+            '<label>Bank Account Number</label>' +
+            '<input type="text" id="pf-input1" placeholder="e.g. 01234567890">' +
+            '<div class="hint">Enter your bank account number</div>' +
+          '</div>' +
+          '<div class="payment-field">' +
+            '<label>Account Holder Name</label>' +
+            '<input type="text" id="pf-input2" placeholder="Name on your bank account">' +
+          '</div>' +
+          '<div class="payment-field">' +
+            '<label>Bank Name</label>' +
+            '<input type="text" id="pf-input3" placeholder="e.g. Nepal Bank Limited">' +
+          '</div>';
+      }
+
+      document.getElementById('payment-content').innerHTML = '' +
+        '<div class="payment-gateway" id="payment-gateway">' +
+          '<div class="payment-gateway-header ' + headerClass + '">' +
+            '<div class="logo-icon">' + headerLogo + '</div>' +
+            '<h2>' + headerTitle + '</h2>' +
+            '<p>' + headerSub + '</p>' +
+          '</div>' +
+          '<div class="payment-gateway-body" id="gateway-body">' +
+            '<div class="payment-merchant">' +
+              '<div class="merchant-icon">A</div>' +
+              '<div class="merchant-info">' +
+                '<div class="label">Paying to</div>' +
+                '<div class="name">AnimeStore Nepal</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="payment-amount-box">' +
+              '<div class="label">Amount to Pay</div>' +
+              '<div class="amount">' + formatPrice(paymentData.total) + '</div>' +
+            '</div>' +
+            fieldsHTML +
+            '<button class="payment-confirm-btn ' + confirmClass + '" id="confirm-btn" onclick="confirmPayment()">'
+              + confirmText + '</button>' +
+            '<button class="payment-cancel-btn" onclick="cancelPayment()">Cancel Payment</button>' +
+            '<div class="secure-badge">\u{1F512} Secured payment gateway</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function showProcessing(text) {
+      document.getElementById('gateway-body').innerHTML = '' +
+        '<div class="payment-processing">' +
+          '<div class="spinner"></div>' +
+          '<p>' + text + '</p>' +
+        '</div>';
+    }
+
+    function confirmPayment() {
+      var inputs = document.querySelectorAll('.payment-field input');
+      for (var i = 0; i < inputs.length; i++) {
+        if (!inputs[i].value.trim()) {
+          inputs[i].style.borderColor = 'var(--error)';
+          showToast('Please fill in all fields');
+          (function(inp) {
+            setTimeout(function() { inp.style.borderColor = 'var(--border)'; }, 2000);
+          })(inputs[i]);
+          return;
+        }
+      }
+
+      var btn = document.getElementById('confirm-btn');
+      btn.disabled = true;
+      var processingText = paymentData.payment_method === 'esewa' ? 'Processing eSewa payment...' : 'Processing bank payment...';
+      showProcessing(processingText);
+
+      setTimeout(function() {
+        showSuccess();
+      }, 2000);
+    }
+
+    function cancelPayment() {
+      showCancelled();
+    }
+
+    function showSuccess() {
+      saveOrder(paymentData, 'completed');
+      clearCart();
+
+      var paymentLabel = paymentData.payment_method === 'esewa' ? 'eSewa' : 'Bank Payment';
+
+      var itemsHTML = paymentData.items.map(function(item) {
+        return '<div class="summary-row">' +
+          '<span>' + item.name + ' x ' + item.quantity + '</span>' +
+          '<span>' + formatPrice(item.price * item.quantity) + '</span>' +
+        '</div>';
+      }).join('');
+
+      document.getElementById('payment-content').innerHTML = '' +
+        '<div class="payment-gateway">' +
+          '<div class="payment-result success">' +
+            '<div class="result-icon">\u2713</div>' +
+            '<h2>Payment Done! Your item is purchased.</h2>' +
+            '<p>Your payment of <strong>' + formatPrice(paymentData.total) + '</strong> has been successfully processed.</p>' +
+            '<div class="order-details">' +
+              '<div class="summary-row"><span>Customer</span><span>' + paymentData.name + '</span></div>' +
+              '<div class="summary-row"><span>Payment Method</span><span>' + paymentLabel + '</span></div>' +
+              '<div class="summary-row"><span>Amount</span><span style="font-weight:700;color:var(--success)">' + formatPrice(paymentData.total) + '</span></div>' +
+              '<div class="summary-row"><span>Status</span><span style="font-weight:700;color:var(--success)">Completed</span></div>' +
+              '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">' +
+              itemsHTML +
+            '</div>' +
+            '<p>Order confirmed! We will deliver your items soon.</p>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">' +
+              '<a href="orders.html" class="btn btn-primary">View My Orders</a>' +
+              '<a href="products.html" class="btn btn-secondary">Continue Shopping</a>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      sessionStorage.removeItem('pending_payment');
+      showToast('Payment successful! Your item is purchased.');
+    }
+
+    function showCancelled() {
+      var paymentLabel = paymentData.payment_method === 'esewa' ? 'eSewa' : 'Bank Payment';
+
+      document.getElementById('payment-content').innerHTML = '' +
+        '<div class="payment-gateway">' +
+          '<div class="payment-result cancelled">' +
+            '<div class="result-icon">\u2715</div>' +
+            '<h2>Payment Cancelled. Your item is not purchased.</h2>' +
+            '<p>Your payment was not completed. No money has been deducted.</p>' +
+            '<div class="order-details">' +
+              '<div class="summary-row"><span>Customer</span><span>' + paymentData.name + '</span></div>' +
+              '<div class="summary-row"><span>Payment Method</span><span>' + paymentLabel + '</span></div>' +
+              '<div class="summary-row"><span>Amount</span><span>' + formatPrice(paymentData.total) + '</span></div>' +
+              '<div class="summary-row"><span>Status</span><span style="font-weight:700;color:var(--error)">Cancelled</span></div>' +
+            '</div>' +
+            '<p>You can try again anytime.</p>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">' +
+              '<a href="checkout.html" class="btn btn-primary">Back to Checkout</a>' +
+              '<a href="products.html" class="btn btn-secondary">Continue Shopping</a>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      sessionStorage.removeItem('pending_payment');
+      showToast('Payment cancelled. Your item is not purchased.');
+    }
+
+    function saveOrder(data, status) {
+      var orderData = {
+        items: JSON.stringify(data.items.map(function(i) { return { product_id: i.id, name: i.name, price: i.price, quantity: i.quantity }; })),
+        total: data.total,
+        payment_method: data.payment_method,
+        customer_name: data.name,
+        customer_email: data.email,
+        customer_phone: data.phone,
+        customer_address: data.address,
+        status: status
+      };
+      var session = getSession();
+      var token = session ? session.access_token : null;
+      supabaseInsert('orders', orderData, token).catch(function(err) {
+        console.error('Failed to save order:', err);
+      });
+    }
+
+    renderPayment();
+  </script>
+</body>
+</html>
